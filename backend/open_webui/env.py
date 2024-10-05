@@ -105,7 +105,9 @@ WEBUI_NAME = os.environ.get("WEBUI_NAME", "Open WebUI")
 
 WEBUI_URL = os.environ.get("WEBUI_URL", "http://localhost:3000")
 
-WEBUI_FAVICON_URL = ""
+WEBUI_FAVICON_URL = (
+    "https://drive.google.com/file/d/187FfHCiSFGsIb2mpjB88pR0AhhxZS6I_/view?usp=sharing"
+)
 
 
 ####################################
