@@ -110,7 +110,9 @@ WEBUI_NAME = os.environ.get("WEBUI_NAME", "Open WebUI")
 
 WEBUI_URL = os.environ.get("WEBUI_URL", "http://localhost:3000")
 
-WEBUI_FAVICON_URL = "https://github.com/David-Zeng/open-webui/blob/cloudU3/static/static/favicon_cloudU3.png"
+WEBUI_FAVICON_URL = (
+    "https://github.com/David-Zeng/open-webui/blob/DJ/static/static/favicon.png"
+)
 
 
 ####################################
