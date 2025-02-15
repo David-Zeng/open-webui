@@ -7,6 +7,8 @@ on:
       # - main
       # - dev
       - DJ
+      - cloudU3
+      - cloudU3-icon-fix
     # tags:
     #   - v*
 
