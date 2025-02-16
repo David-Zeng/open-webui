@@ -9,8 +9,8 @@ on:
       - DJ
       - cloudU3
       - cloudU3-icon-fix
-    # tags:
-    #   - v*
+    tags:
+      - v*
 
 env:
   REGISTRY: ghcr.io
