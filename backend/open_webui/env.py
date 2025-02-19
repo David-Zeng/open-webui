@@ -117,6 +117,7 @@ WEBUI_FAVICON_URL = (
     "https://github.com/David-Zeng/open-webui/blob/DJ/static/static/favicon.png"
 )
 
+TRUSTED_SIGNATURE_KEY = os.environ.get("TRUSTED_SIGNATURE_KEY", "")
 
 ####################################
 # ENV (dev,test,prod)
