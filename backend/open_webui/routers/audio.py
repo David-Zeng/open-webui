@@ -125,6 +125,8 @@ def set_faster_whisper_model(model: str, auto_update: bool = False):
 class TTSConfigForm(BaseModel):
     OPENAI_API_BASE_URL: str
     OPENAI_API_KEY: str
+    DEEPINFRA_OPENAI_API_BASE_URL: str
+    DEEPINFRA_OPENAI_API_KEY: str
     API_KEY: str
     ENGINE: str
     MODEL: str
@@ -154,6 +156,8 @@ async def get_audio_config(request: Request, user=Depends(get_admin_user)):
         "tts": {
             "OPENAI_API_BASE_URL": request.app.state.config.TTS_OPENAI_API_BASE_URL,
             "OPENAI_API_KEY": request.app.state.config.TTS_OPENAI_API_KEY,
+            "DEEPINFRA_OPENAI_API_BASE_URL": request.app.state.config.TTS_DEEPINFRA_OPENAI_API_BASE_URL,
+            "DEEPINFRA_OPENAI_API_KEY": request.app.state.config.TTS_DEEPINFRA_OPENAI_API_KEY,
             "API_KEY": request.app.state.config.TTS_API_KEY,
             "ENGINE": request.app.state.config.TTS_ENGINE,
             "MODEL": request.app.state.config.TTS_MODEL,
@@ -179,6 +183,12 @@ async def update_audio_config(
 ):
     request.app.state.config.TTS_OPENAI_API_BASE_URL = form_data.tts.OPENAI_API_BASE_URL
     request.app.state.config.TTS_OPENAI_API_KEY = form_data.tts.OPENAI_API_KEY
+    request.app.state.config.TTS_DEEPINFRA_OPENAI_API_BASE_URL = (
+        form_data.tts.DEEPINFRA_OPENAI_API_BASE_URL
+    )
+    request.app.state.config.TTS_DEEPINFRA_OPENAI_API_KEY = (
+        form_data.tts.DEEPINFRA_OPENAI_API_KEY
+    )
     request.app.state.config.TTS_API_KEY = form_data.tts.API_KEY
     request.app.state.config.TTS_ENGINE = form_data.tts.ENGINE
     request.app.state.config.TTS_MODEL = form_data.tts.MODEL
@@ -205,6 +215,8 @@ async def update_audio_config(
         "tts": {
             "OPENAI_API_BASE_URL": request.app.state.config.TTS_OPENAI_API_BASE_URL,
             "OPENAI_API_KEY": request.app.state.config.TTS_OPENAI_API_KEY,
+            "DEEPINFRA_OPENAI_API_BASE_URL": request.app.state.config.TTS_DEEPINFRA_OPENAI_API_BASE_URL,
+            "DEEPINFRA_OPENAI_API_KEY": request.app.state.config.TTS_DEEPINFRA_OPENAI_API_KEY,
             "API_KEY": request.app.state.config.TTS_API_KEY,
             "ENGINE": request.app.state.config.TTS_ENGINE,
             "MODEL": request.app.state.config.TTS_MODEL,
@@ -276,6 +288,60 @@ async def speech(request: Request, user=Depends(get_verified_user)):
                     headers={
                         "Content-Type": "application/json",
                         "Authorization": f"Bearer {request.app.state.config.TTS_OPENAI_API_KEY}",
+                        **(
+                            {
+                                "X-OpenWebUI-User-Name": user.name,
+                                "X-OpenWebUI-User-Id": user.id,
+                                "X-OpenWebUI-User-Email": user.email,
+                                "X-OpenWebUI-User-Role": user.role,
+                            }
+                            if ENABLE_FORWARD_USER_INFO_HEADERS
+                            else {}
+                        ),
+                    },
+                ) as r:
+                    r.raise_for_status()
+
+                    async with aiofiles.open(file_path, "wb") as f:
+                        await f.write(await r.read())
+
+                    async with aiofiles.open(file_body_path, "w") as f:
+                        await f.write(json.dumps(payload))
+
+            return FileResponse(file_path)
+
+        except Exception as e:
+            log.exception(e)
+            detail = None
+
+            try:
+                if r.status != 200:
+                    res = await r.json()
+
+                    if "error" in res:
+                        detail = f"External: {res['error'].get('message', '')}"
+            except Exception:
+                detail = f"External: {e}"
+
+            raise HTTPException(
+                status_code=getattr(r, "status", 500),
+                detail=detail if detail else "Open WebUI: Server Connection Error",
+            )
+
+    elif request.app.state.config.TTS_ENGINE == "deepinfra-openai":
+        payload["model"] = request.app.state.config.TTS_MODEL
+
+        try:
+            timeout = aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT)
+            async with aiohttp.ClientSession(
+                timeout=timeout, trust_env=True
+            ) as session:
+                async with session.post(
+                    url=f"{request.app.state.config.TTS_DEEPINFRA_OPENAI_API_BASE_URL}",
+                    json=payload,
+                    headers={
+                        "Content-Type": "application/json",
+                        "Authorization": f"Bearer {request.app.state.config.TTS_DEEPINFRA_OPENAI_API_KEY}",
                         **(
                             {
                                 "X-OpenWebUI-User-Name": user.name,
@@ -695,6 +761,23 @@ def get_available_models(request: Request) -> list[dict]:
                 available_models = [{"id": "tts-1"}, {"id": "tts-1-hd"}]
         else:
             available_models = [{"id": "tts-1"}, {"id": "tts-1-hd"}]
+    elif request.app.state.config.TTS_ENGINE == "deepinfra_openai":
+        # Use custom endpoint if not using the official OpenAI API URL
+        if not request.app.state.config.TTS_DEEPINFRA_OPENAI_API_BASE_URL.startswith(
+            "https://api.deepinfra.com/v1/"
+        ):
+            try:
+                response = requests.get(
+                    f"{request.app.state.config.TTS_OPENAI_API_BASE_URL}/hexgrad/Kokoro-82M/audio/speech"
+                )
+                response.raise_for_status()
+                data = response.json()
+                available_models = data.get("models", [])
+            except Exception as e:
+                log.error(f"Error fetching models from custom endpoint: {str(e)}")
+                available_models = [{"id": "hexgrad/Kokoro-82M"}, {"id": "tts-1-hd"}]
+        else:
+            available_models = [{"id": "tts-1"}, {"id": "tts-1-hd"}]
     elif request.app.state.config.TTS_ENGINE == "elevenlabs":
         try:
             response = requests.get(
@@ -756,6 +839,39 @@ def get_available_voices(request) -> dict:
                 "nova": "nova",
                 "shimmer": "shimmer",
             }
+    elif request.app.state.config.TTS_ENGINE == "deepinfra_openai":
+        # Use custom endpoint if not using the official OpenAI API URL
+        if not request.app.state.config.TTS_DEEPINFRA_OPENAI_API_BASE_URL.startswith(
+            "https://api.deepinfra.com/v1/"
+        ):
+            try:
+                response = requests.get(
+                    f"{request.app.state.config.TTS_OPENAI_API_BASE_URL}/hexgrad/Kokoro-82M/audio/speech"
+                )
+                response.raise_for_status()
+                data = response.json()
+                voices_list = data.get("voices", [])
+                available_voices = {voice["id"]: voice["name"] for voice in voices_list}
+            except Exception as e:
+                log.error(f"Error fetching voices from custom endpoint: {str(e)}")
+                available_voices = {
+                    "alloy": "alloy",
+                    "echo": "echo",
+                    "fable": "fable",
+                    "onyx": "onyx",
+                    "nova": "nova",
+                    "shimmer": "shimmer",
+                }
+        else:
+            available_voices = {
+                "alloy": "alloy",
+                "echo": "echo",
+                "fable": "fable",
+                "onyx": "onyx",
+                "nova": "nova",
+                "shimmer": "shimmer",
+            }
+
     elif request.app.state.config.TTS_ENGINE == "elevenlabs":
         try:
             available_voices = get_elevenlabs_voices(

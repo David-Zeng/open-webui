@@ -26,6 +26,8 @@
 	// Audio
 	let TTS_OPENAI_API_BASE_URL = '';
 	let TTS_OPENAI_API_KEY = '';
+	let TTS_DEEPINFRA_OPENAI_API_BASE_URL = '';
+	let TTS_DEEPINFRA_OPENAI_API_KEY = '';
 	let TTS_API_KEY = '';
 	let TTS_ENGINE = '';
 	let TTS_MODEL = '';
@@ -94,6 +96,8 @@
 			tts: {
 				OPENAI_API_BASE_URL: TTS_OPENAI_API_BASE_URL,
 				OPENAI_API_KEY: TTS_OPENAI_API_KEY,
+				DEEPINFRA_OPENAI_API_BASE_URL: TTS_DEEPINFRA_OPENAI_API_BASE_URL,
+				DEEPINFRA_OPENAI_API_KEY: TTS_DEEPINFRA_OPENAI_API_KEY,
 				API_KEY: TTS_API_KEY,
 				ENGINE: TTS_ENGINE,
 				MODEL: TTS_MODEL,
@@ -131,6 +135,8 @@
 			console.log(res);
 			TTS_OPENAI_API_BASE_URL = res.tts.OPENAI_API_BASE_URL;
 			TTS_OPENAI_API_KEY = res.tts.OPENAI_API_KEY;
+			TTS_DEEPINFRA_OPENAI_API_BASE_URL = res.tts.DEEPINFRA_OPENAI_API_BASE_URL;
+			TTS_DEEPINFRA_OPENAI_API_KEY = res.tts.DEEPINFRA_OPENAI_API_KEY;
 			TTS_API_KEY = res.tts.API_KEY;
 
 			TTS_ENGINE = res.tts.ENGINE;
@@ -379,6 +385,19 @@
 							/>
 
 							<SensitiveInput placeholder={$i18n.t('API Key')} bind:value={TTS_OPENAI_API_KEY} />
+						</div>
+					</div>
+				{:else if TTS_ENGINE === 'deepinfra_openai'}
+					<div>
+						<div class="mt-1 flex gap-2 mb-1">
+							<input
+								class="flex-1 w-full bg-transparent outline-hidden"
+								placeholder={$i18n.t('API Base URL')}
+								bind:value={TTS_DEEPINFRA_OPENAI_API_BASE_URL}
+								required
+							/>
+
+							<SensitiveInput placeholder={$i18n.t('API Key')} bind:value={TTS_DEEPINFRA_OPENAI_API_KEY} />
 						</div>
 					</div>
 				{:else if TTS_ENGINE === 'elevenlabs'}

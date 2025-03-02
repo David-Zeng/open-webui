@@ -2312,6 +2312,17 @@ AUDIO_TTS_OPENAI_API_KEY = PersistentConfig(
     "audio.tts.openai.api_key",
     os.getenv("AUDIO_TTS_OPENAI_API_KEY", OPENAI_API_KEY),
 )
+AUDIO_TTS_DEEPINFRA_OPENAI_API_BASE_URL = PersistentConfig(
+    "AUDIO_TTS_DEEPINFRA_OPENAI_API_BASE_URL",
+    "audio.tts.deepinfra_openai.api_base_url",
+    os.getenv("AUDIO_TTS_DEEPINRA_OPENAI_API_BASE_URL", DEEPINFRA_OPENAI_API_BASE_URL),
+)
+AUDIO_TTS_DEEPINFRA_OPENAI_API_KEY = PersistentConfig(
+    "AUDIO_TTS_DEEPINFRA_OPENAI_API_KEY",
+    "audio.tts.deepinfra_openai.api_key",
+    os.getenv("AUDIO_TTS_DEEPINFRA_OPENAI_API_KEY", OPENAI_API_KEY),
+)
+
 
 AUDIO_TTS_API_KEY = PersistentConfig(
     "AUDIO_TTS_API_KEY",
