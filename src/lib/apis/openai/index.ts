@@ -389,25 +389,42 @@ export const generateOpenAIChatCompletion = async (
 	return res;
 };
 
+
 export const synthesizeOpenAISpeech = async (
 	token: string = '',
-	speaker: string = 'alloy',
+	speaker: string = 'af_jessica',
 	text: string = '',
-	model: string = 'tts-1'
+	model: string = 'hexgrad/Kokoro-82M'
 ) => {
 	let error = null;
+	
+	// Check if using DeepInfra Kokoro model
+	const isDeepInfra = model.includes('Kokoro');
+	
+	// Use the appropriate URL format based on the model
+	const url = isDeepInfra 
+		? OPENAI_API_BASE_URL // For DeepInfra, don't append /audio/speech
+		: `${OPENAI_API_BASE_URL}/audio/speech`; // For OpenAI, append /audio/speech
+	
+	// Prepare the request body based on the model
+	const requestBody = isDeepInfra
+		? {
+				input: text,
+				voice: speaker
+			}
+		: {
+				model: model,
+				input: text,
+				voice: speaker
+			};
 
-	const res = await fetch(`${OPENAI_API_BASE_URL}/audio/speech`, {
+	const res = await fetch(url, {
 		method: 'POST',
 		headers: {
 			Authorization: `Bearer ${token}`,
 			'Content-Type': 'application/json'
 		},
-		body: JSON.stringify({
-			model: model,
-			input: text,
-			voice: speaker
-		})
+		body: JSON.stringify(requestBody)
 	}).catch((err) => {
 		console.log(err);
 		error = err;
