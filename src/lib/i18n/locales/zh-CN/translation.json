@@ -743,6 +743,7 @@
 	"Open WebUI uses SpeechT5 and CMU Arctic speaker embeddings.": "Open WebUI 使用 SpeechT5 和 CMU Arctic speaker embedding。",
 	"Open WebUI version (v{{OPEN_WEBUI_VERSION}}) is lower than required version (v{{REQUIRED_VERSION}})": "当前 Open WebUI 版本 (v{{OPEN_WEBUI_VERSION}}) 低于所需的版本 (v{{REQUIRED_VERSION}})",
 	"OpenAI": "OpenAI",
+	"Deepinfra OpenAI": "Deepinfra OpenAI",
 	"OpenAI API": "OpenAI API",
 	"OpenAI API Config": "OpenAI API 配置",
 	"OpenAI API Key is required.": "需要 OpenAI API 密钥。",
