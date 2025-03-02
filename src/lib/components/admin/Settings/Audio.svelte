@@ -351,23 +351,26 @@
 							class=" dark:bg-gray-900 w-fit pr-8 cursor-pointer rounded-sm px-2 p-1 text-xs bg-transparent outline-hidden text-right"
 							bind:value={TTS_ENGINE}
 							placeholder="Select a mode"
-							on:change={async (e) => {
-								await updateConfigHandler();
-								await getVoices();
-								await getModels();
-
-								if (e.target?.value === 'openai') {
-									TTS_VOICE = 'alloy';
-									TTS_MODEL = 'tts-1';
-								} else {
-									TTS_VOICE = '';
-									TTS_MODEL = '';
-								}
-							}}
+                            on:change={async (e) => {
+                              await updateConfigHandler();
+                              await getVoices();
+                              await getModels();
+                              if (e.target?.value === 'openai') {
+                                TTS_VOICE = 'alloy';
+                                TTS_MODEL = 'tts-1';
+                              } else if (e.target?.value === 'deepinfra-openai') {
+                                TTS_VOICE = 'af_jessica';
+                                TTS_MODEL = 'hexgrad/Kokoro-82M';
+                              } else {
+                                TTS_VOICE = '';
+                                TTS_MODEL = '';
+                              }
+                            }}
 						>
 							<option value="">{$i18n.t('Web API')}</option>
 							<option value="transformers">{$i18n.t('Transformers')} ({$i18n.t('Local')})</option>
 							<option value="openai">{$i18n.t('OpenAI')}</option>
+							<option value="openai">{$i18n.t('Deepnfra OpenAI')}</option>
 							<option value="elevenlabs">{$i18n.t('ElevenLabs')}</option>
 							<option value="azure">{$i18n.t('Azure AI Speech')}</option>
 						</select>
@@ -387,7 +390,7 @@
 							<SensitiveInput placeholder={$i18n.t('API Key')} bind:value={TTS_OPENAI_API_KEY} />
 						</div>
 					</div>
-				{:else if TTS_ENGINE === 'deepinfra_openai'}
+				{:else if TTS_ENGINE === 'deepinfra-openai'}
 					<div>
 						<div class="mt-1 flex gap-2 mb-1">
 							<input
