@@ -58,12 +58,10 @@ The search in `.svelte` files revealed that `favicon.png` is frequently used as 
 
 4. **Update `static/manifest.json` (if of the appropriate dimensions (e.g., 192x192 for `web-app-manifest-192x192.png`).
 
-4. **Update `static/manifest.json` (if
-
-
 ---
 
 icon list:
-- static/static/apple-touch-icon.png
-- static/static/favicon-dark.png
-- static/static/logo.png
+
+* static/static/apple-touch-icon.png: done
+* static/static/favicon-dark.png
+* static/static/logo.png
