@@ -2,6 +2,15 @@ name: Create and publish Docker images with specific build args
 
 on:
   workflow_dispatch:
+    inputs:
+      no_cache:
+        description: 'Disable Docker layer cache (use to fix stale cache issues)'
+        required: false
+        default: 'false'
+        type: choice
+        options:
+          - 'false'
+          - 'true'
   push:
     branches:
       - DJ
@@ -89,11 +98,12 @@ jobs:
         with:
           context: .
           push: true
+          no-cache: ${{ github.event.inputs.no_cache == 'true' }}
           platforms: ${{ matrix.platform }}
           labels: ${{ steps.meta.outputs.labels }}
           outputs: type=image,name=${{ env.FULL_IMAGE_NAME }},push-by-digest=true,name-canonical=true,push=true
-          cache-from: type=registry,ref=${{ steps.cache-meta.outputs.tags }}
-          cache-to: type=registry,ref=${{ steps.cache-meta.outputs.tags }},mode=max
+          cache-from: ${{ github.event.inputs.no_cache != 'true' && format('type=registry,ref={0}', steps.cache-meta.outputs.tags) || '' }}
+          cache-to: ${{ github.event.inputs.no_cache != 'true' && format('type=registry,ref={0},mode=max', steps.cache-meta.outputs.tags) || '' }}
           sbom: true
           build-args: |
             BUILD_HASH=${{ github.sha }}
@@ -191,11 +201,12 @@ jobs:
         with:
           context: .
           push: true
+          no-cache: ${{ github.event.inputs.no_cache == 'true' }}
           platforms: ${{ matrix.platform }}
           labels: ${{ steps.meta.outputs.labels }}
           outputs: type=image,name=${{ env.FULL_IMAGE_NAME }},push-by-digest=true,name-canonical=true,push=true
-          cache-from: type=registry,ref=${{ steps.cache-meta.outputs.tags }}
-          cache-to: type=registry,ref=${{ steps.cache-meta.outputs.tags }},mode=max
+          cache-from: ${{ github.event.inputs.no_cache != 'true' && format('type=registry,ref={0}', steps.cache-meta.outputs.tags) || '' }}
+          cache-to: ${{ github.event.inputs.no_cache != 'true' && format('type=registry,ref={0},mode=max', steps.cache-meta.outputs.tags) || '' }}
           sbom: true
           build-args: |
             BUILD_HASH=${{ github.sha }}

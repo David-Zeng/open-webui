@@ -160,6 +160,9 @@ RUN pip3 install --no-cache-dir uv && \
     mkdir -p /app/backend/data && chown -R $UID:$GID /app/backend/data/ && \
     rm -rf /var/lib/apt/lists/*;
 
+# Verify critical packages were installed (fails build if uv pip install was a no-op)
+RUN python3 -c "import uvicorn, fastapi, pydantic; print('Core packages OK')"
+
 # Install Ollama if requested
 RUN if [ "$USE_OLLAMA" = "true" ]; then \
     date +%s > /tmp/ollama_build_hash && \
