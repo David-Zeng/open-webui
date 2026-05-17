@@ -9,7 +9,7 @@ set -euo pipefail
 # Usage:
 #   ./generate.sh path/to/company-logo.svg
 #
-# Output: .sisyphus/branding-icons/output/
+# Output: branding-icons/output/
 # =============================================================================
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
@@ -19,6 +19,9 @@ OUTPUT_DIR="$PROJECT_DIR/output"
 # Clean and recreate output
 rm -rf "$OUTPUT_DIR"
 mkdir -p "$OUTPUT_DIR"
+
+# Remove temp files on exit (success or failure)
+trap 'rm -f "$OUTPUT_DIR"/temp_*.png' EXIT
 
 # --- Input Validation ---
 
@@ -35,17 +38,6 @@ if [ ! -f "$LOGO_SVG" ]; then
     exit 1
 fi
 
-# Determine SVG size from viewBox (default 256x256 if not found)
-# Uses POSIX-compatible approach — no -P flag
-VIEWBOX=$(grep -o 'viewBox="[^"]*"' "$LOGO_SVG" 2>/dev/null | sed 's/viewBox="//;s/"//' || true)
-VIEWBOX=${VIEWBOX:-"0 0 256 256"}
-SVG_WIDTH=$(echo "$VIEWBOX" | awk '{print $3}')
-SVG_HEIGHT=$(echo "$VIEWBOX" | awk '{print $4}')
-SVG_WIDTH=${SVG_WIDTH:-256}
-SVG_HEIGHT=${SVG_HEIGHT:-256}
-
-echo "🔍 Logo SVG detected: ${SVG_WIDTH}x${SVG_HEIGHT}"
-
 # --- Dependency Checks ---
 
 MISSING=()
@@ -53,18 +45,18 @@ MISSING=()
 # ImageMagick — non-optional
 if command -v magick >/dev/null 2>&1; then
     # ImageMagick v7+ unified CLI
-    __CONVERT="magick"
-    __IDENTIFY="magick identify"
+    __CONVERT=("magick")
+    __IDENTIFY=("magick" "identify")
 elif command -v convert >/dev/null 2>&1; then
-    __CONVERT="convert"
-    __IDENTIFY="identify"
+    __CONVERT=("convert")
+    __IDENTIFY=("identify")
 else
     MISSING+=("ImageMagick (convert/magick)")
 fi
 
 # Verify identify is usable
-if [ -n "${__IDENTIFY:-}" ]; then
-    if ! $__IDENTIFY -version >/dev/null 2>&1; then
+if [ ${#__IDENTIFY[@]:-0} -gt 0 ]; then
+    if ! "${__IDENTIFY[@]}" -version >/dev/null 2>&1; then
         MISSING+=("ImageMagick identify (not functional)")
     fi
 fi
@@ -143,33 +135,37 @@ echo "  ✓ favicon.png (32×32)"
 $__RASTERIZE "$LOGO_SVG" "$OUTPUT_DIR/favicon-96x96.png" 96
 echo "  ✓ favicon-96x96.png (96×96)"
 
-# favicon-dark.png (inverted for dark browser themes)
+# favicon-dark.png — white background so logo is visible on dark browser chrome.
+# Simple -negate would corrupt brand colors (e.g. blue → orange), so instead
+# we composite the logo onto a dark background rather than inverting pixels.
 $__RASTERIZE "$LOGO_SVG" "$OUTPUT_DIR/temp_dark.png" 32
-$__CONVERT "$OUTPUT_DIR/temp_dark.png" -negate "$OUTPUT_DIR/favicon-dark.png"
+"${__CONVERT[@]}" -size 32x32 xc:'#1a1a1a' \
+    "$OUTPUT_DIR/temp_dark.png" -gravity center -composite \
+    "$OUTPUT_DIR/favicon-dark.png"
 rm -f "$OUTPUT_DIR/temp_dark.png"
-echo "  ✓ favicon-dark.png (32×32, inverted)"
+echo "  ✓ favicon-dark.png (32×32, dark background)"
 
 # favicon.ico (multi-resolution ICO)
-$__CONVERT "$OUTPUT_DIR/favicon.png" -define icon:auto-resize=16,32,48,64 \
+"${__CONVERT[@]}" "$OUTPUT_DIR/favicon.png" -define icon:auto-resize=16,32,48,64 \
     "$OUTPUT_DIR/favicon.ico"
 echo "  ✓ favicon.ico"
 
-# --- Apple Touch Icon (180x180, iOS applies its own corner rounding) ---
+# --- Apple Touch Icon (180x180) ---
+# Use transparent background — iOS applies its own corner radius and background.
+# A forced white canvas looks wrong on dark home screens.
 
 echo ""
 echo "🍎 Generating Apple touch icon..."
 
-$__RASTERIZE "$LOGO_SVG" "$OUTPUT_DIR/temp_touch.png" 180
-
-# Create 180x180 canvas, draw logo centered with padding
-LOGO_SIZE=100
+LOGO_SIZE=120
 PADDING=$(( (180 - LOGO_SIZE) / 2 ))
-$__CONVERT -size 180x180 xc:white \
+$__RASTERIZE "$LOGO_SVG" "$OUTPUT_DIR/temp_touch.png" "$LOGO_SIZE"
+"${__CONVERT[@]}" -size 180x180 xc:none \
     \( "$OUTPUT_DIR/temp_touch.png" -resize ${LOGO_SIZE}x${LOGO_SIZE} \) \
     -geometry +${PADDING}+${PADDING} -composite \
     "$OUTPUT_DIR/apple-touch-icon.png"
 rm -f "$OUTPUT_DIR/temp_touch.png"
-echo "  ✓ apple-touch-icon.png (180×180)"
+echo "  ✓ apple-touch-icon.png (180×180, transparent)"
 
 # --- Logo (preserves aspect ratio, height-constrained) ---
 
@@ -177,17 +173,15 @@ echo ""
 echo "🖼️  Generating logo..."
 
 LOGO_HEIGHT=200
-$__RASTERIZE_FIT "$LOGO_SVG" "$OUTPUT_DIR/temp_logo.png" "$LOGO_HEIGHT"
-WIDTH=$($__IDENTIFY -format '%w' "$OUTPUT_DIR/temp_logo.png")
+$__RASTERIZE_FIT "$LOGO_SVG" "$OUTPUT_DIR/logo.png" "$LOGO_HEIGHT"
+
+WIDTH=$("${__IDENTIFY[@]}" -format '%w' "$OUTPUT_DIR/logo.png")
 
 if [ -z "$WIDTH" ] || [ "$WIDTH" -eq 0 ]; then
     echo "Error: Could not determine logo dimensions from rasterized output." >&2
     exit 1
 fi
 
-# Use pure bash integer math (no bc dependency needed — ImageMagick handles sub-pixel)
-$__CONVERT "$OUTPUT_DIR/temp_logo.png" -resize "${WIDTH}x${LOGO_HEIGHT}" "$OUTPUT_DIR/logo.png"
-rm -f "$OUTPUT_DIR/temp_logo.png"
 echo "  ✓ logo.png (${WIDTH}x${LOGO_HEIGHT}, aspect ratio preserved)"
 
 # --- Splash Screens ---
@@ -195,22 +189,20 @@ echo "  ✓ logo.png (${WIDTH}x${LOGO_HEIGHT}, aspect ratio preserved)"
 echo ""
 echo "🌅 Generating splash screens..."
 
-LOGO_FOR_SPLASH="${LOGO_FOR_SPLASH:-$OUTPUT_DIR/logo.png}"
-
 SPLASH_W=800
 SPLASH_H=800
+SPLASH_LOGO_SIZE=256
 
 # Light splash
-SPLASH_LOGO_SIZE=256
-$__CONVERT -size ${SPLASH_W}x${SPLASH_H} xc:'#ffffff' \
-    \( "$LOGO_FOR_SPLASH" -resize ${SPLASH_LOGO_SIZE}x${SPLASH_LOGO_SIZE} \) \
+"${__CONVERT[@]}" -size ${SPLASH_W}x${SPLASH_H} xc:'#ffffff' \
+    \( "$OUTPUT_DIR/logo.png" -resize ${SPLASH_LOGO_SIZE}x${SPLASH_LOGO_SIZE} \) \
     -gravity center -composite \
     "$OUTPUT_DIR/splash.png"
 echo "  ✓ splash.png (800×800, light)"
 
 # Dark splash
-$__CONVERT -size ${SPLASH_W}x${SPLASH_H} xc:'#000000' \
-    \( "$LOGO_FOR_SPLASH" -resize ${SPLASH_LOGO_SIZE}x${SPLASH_LOGO_SIZE} \) \
+"${__CONVERT[@]}" -size ${SPLASH_W}x${SPLASH_H} xc:'#000000' \
+    \( "$OUTPUT_DIR/logo.png" -resize ${SPLASH_LOGO_SIZE}x${SPLASH_LOGO_SIZE} \) \
     -gravity center -composite \
     "$OUTPUT_DIR/splash-dark.png"
 echo "  ✓ splash-dark.png (800×800, dark)"
@@ -222,7 +214,7 @@ echo "📱 Generating PWA icons..."
 
 # web-app-manifest-192x192.png
 $__RASTERIZE "$LOGO_SVG" "$OUTPUT_DIR/temp_pwa192.png" 128
-$__CONVERT -size 192x192 xc:white \
+"${__CONVERT[@]}" -size 192x192 xc:white \
     \( "$OUTPUT_DIR/temp_pwa192.png" -resize 128x128 \) \
     -gravity center -composite \
     "$OUTPUT_DIR/web-app-manifest-192x192.png"
@@ -231,7 +223,7 @@ echo "  ✓ web-app-manifest-192x192.png"
 
 # web-app-manifest-512x512.png
 $__RASTERIZE "$LOGO_SVG" "$OUTPUT_DIR/temp_pwa512.png" 384
-$__CONVERT -size 512x512 xc:white \
+"${__CONVERT[@]}" -size 512x512 xc:white \
     \( "$OUTPUT_DIR/temp_pwa512.png" -resize 384x384 \) \
     -gravity center -composite \
     "$OUTPUT_DIR/web-app-manifest-512x512.png"
@@ -239,17 +231,19 @@ rm -f "$OUTPUT_DIR/temp_pwa512.png"
 echo "  ✓ web-app-manifest-512x512.png"
 
 # --- User Avatar ---
+# Use a neutral silhouette placeholder, not the company logo.
+# The company logo as a user avatar is confusing — this file is the default
+# profile image for every account in Open WebUI.
 
 echo ""
 echo "👤 Generating default user avatar..."
 
-$__RASTERIZE "$LOGO_SVG" "$OUTPUT_DIR/temp_user.png" 80
-$__CONVERT -size 128x128 xc:'#e5e7eb' \
-    \( "$OUTPUT_DIR/temp_user.png" -resize 80x80 \) \
-    -gravity center -composite \
+"${__CONVERT[@]}" -size 128x128 xc:'#e5e7eb' \
+    -fill '#9ca3af' \
+    -draw "circle 64,48 64,78" \
+    -draw "arc 14,70 114,140 0,180" \
     "$OUTPUT_DIR/user.png"
-rm -f "$OUTPUT_DIR/temp_user.png"
-echo "  ✓ user.png (128×128)"
+echo "  ✓ user.png (128×128, neutral silhouette)"
 
 # --- Swagger UI Favicon ---
 

@@ -59,7 +59,8 @@ Input: company-logo.svg
 ## Deploy Process
 
 ```bash
-# 1. Generate all files into .sisyphus/branding-icons/output/
+# 1. Generate all files into branding-icons/output/
+./branding-icons/scripts/generate.sh path/to/company-logo.svg
 # 2. Review output
 # 3. Copy to both locations:
 cp output/*.svg output/*.png output/*.ico static/static/
@@ -68,8 +69,8 @@ cp output/swagger-ui/favicon.png backend/open_webui/static/swagger-ui/
 ```
 
 ## Notes
-- `favicon-dark.png` is used by browsers that prefer dark theme; invert the logo colors
-- `apple-touch-icon.png` needs background padding (Apple's HIG)
-- `favicon.ico` requires ImageMagick: `convert favicon.png favicon.ico`
+- `favicon-dark.png` is used by browsers that prefer dark theme; the logo is composited onto a dark background to preserve brand colors
+- `apple-touch-icon.png` uses a transparent background — iOS applies its own corner radius and background color
+- `favicon.ico` is generated automatically by the script (no manual ImageMagick step needed)
 - Splash screens: logo centered, matching the light/dark theme background
 - The `site.webmanifest` references `/static/` paths — no changes needed if filenames stay same
