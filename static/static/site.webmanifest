@@ -1,6 +1,6 @@
 {
-  "name": "Open WebUI",
-  "short_name": "WebUI",
+  "name": "DJ AI App",
+  "short_name": "DJ",
   "icons": [
     {
       "src": "/static/web-app-manifest-192x192.png",
