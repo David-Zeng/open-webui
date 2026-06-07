@@ -768,9 +768,7 @@ if LICENSE_PUBLIC_KEY:
 # WEBUI Identity
 ####################################
 
-WEBUI_NAME = os.getenv('WEBUI_NAME', 'DJ AI App')
-if WEBUI_NAME != 'DJ AI App':
-    WEBUI_NAME += ' (DJ AI App)'
+WEBUI_NAME = os.getenv('WEBUI_NAME', 'DJ-AI-App')
 
 WEBUI_FAVICON_URL = 'https://openwebui.com/favicon.png'
 WEBUI_BUILD_HASH = os.getenv('WEBUI_BUILD_HASH', 'dev-build')
