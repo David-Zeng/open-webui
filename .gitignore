@@ -2,6 +2,7 @@ x.py
 yarn.lock
 .DS_Store
 .codegraph/
+.playwright-cli/
 node_modules
 /build
 /.svelte-kit
