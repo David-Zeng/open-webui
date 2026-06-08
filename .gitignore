@@ -2,6 +2,7 @@ x.py
 branding-icons/output/
 yarn.lock
 .DS_Store
+.codegraph/
 node_modules
 /build
 /.svelte-kit
