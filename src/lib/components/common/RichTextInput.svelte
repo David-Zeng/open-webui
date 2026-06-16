@@ -959,6 +959,23 @@
 				handlePaste: (view, event) => {
 					// Force plain-text pasting when richText === false
 					if (!richText) {
+						// Delegate image/file pastes to the parent even in plain-text mode.
+						if (event.clipboardData) {
+							const hasImageFile = Array.from(event.clipboardData.files).some((file) =>
+								file.type.startsWith('image/')
+							);
+							const hasImageItem = Array.from(event.clipboardData.items).some((item) =>
+								item.type.startsWith('image/')
+							);
+							const hasFile = Array.from(event.clipboardData.files).length > 0;
+
+							if (hasImageFile || hasImageItem || hasFile) {
+								eventDispatch('paste', { event });
+								event.preventDefault();
+								return true;
+							}
+						}
+
 						// swallow HTML completely
 						event.preventDefault();
 						const { state, dispatch } = view;
