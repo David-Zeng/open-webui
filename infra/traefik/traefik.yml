@@ -1,0 +1,29 @@
+entryPoints:
+  web:
+    address: ":80"
+  websecure:
+    address: ":443"
+
+providers:
+  file:
+    filename: /etc/traefik/dynamic_conf.yml
+
+certificatesResolvers:
+  myresolver:
+    acme:
+      email: david.zengdj@gmail.com
+      storage: /etc/traefik/acme.json
+      httpChallenge:
+        entryPoint: web
+
+api:
+  dashboard: false
+  insecure: false
+
+accessLog:
+  filePath: "/var/log/traefik/access.log"
+  bufferingSize: 100
+
+log:
+  filePath: "/var/log/traefik/traefik.log"
+  level: ERROR

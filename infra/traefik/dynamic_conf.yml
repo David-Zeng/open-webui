@@ -1,0 +1,81 @@
+http:
+  routers:
+    # Block common scanner/bot paths — drop them before reaching open-webui
+    block-scanners:
+      rule: "(Host(`cloudu3ai.com`)) && (PathPrefix(`/wp-`) || PathPrefix(`/xmlrpc`) || Path(`/.env`) || PathPrefix(`/phpmyadmin`) || PathPrefix(`/cgi-bin`) || PathPrefix(`/actuator`) || Path(`/.git/config`) || PathPrefix(`/vendor/phpunit`))"
+      entryPoints:
+        - websecure
+      tls:
+        certResolver: myresolver
+      middlewares:
+        - blockresponse
+      service: dead-end
+      priority: 100
+
+    openwebui-router:
+      rule: "Host(`cloudu3ai.com`)"
+      service: openwebui-service
+      entryPoints:
+        - websecure
+      tls:
+        certResolver: myresolver
+      middlewares:
+        - secureHeaders
+        - hsts
+        - ratelimit
+      priority: 10
+
+    redirect-to-https:
+      rule: "Host(`cloudu3ai.com`)"
+      entryPoints:
+        - web
+      middlewares:
+        - redirect-to-https
+      service: noop@internal
+
+  services:
+    openwebui-service:
+      loadBalancer:
+        servers:
+          - url: "http://open-webui-app1:8080"
+    dead-end:
+      loadBalancer:
+        servers:
+          - url: "http://127.0.0.1:1"
+
+  middlewares:
+    redirect-to-https:
+      redirectScheme:
+        scheme: https
+        permanent: true
+    secureHeaders:
+      headers:
+        sslRedirect: true
+        forceSTSHeader: true
+        stsIncludeSubdomains: true
+        stsPreload: true
+        stsSeconds: 31536000
+        contentTypeNosniff: true
+        browserXssFilter: true
+        referrerPolicy: "strict-origin-when-cross-origin"
+        permissionsPolicy: "camera=(), microphone=(), geolocation=(), payment=()"
+        # connect-src includes blob: and data: for Open WebUI image paste (fetch internal data URIs)
+        # worker-src blob: for web workers; media-src for audio/video blob playback
+        contentSecurityPolicy: "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' blob: data: wss:; worker-src blob:; media-src 'self' blob: data:; frame-ancestors 'none'"
+        customResponseHeaders:
+          X-Frame-Options: "SAMEORIGIN"
+          X-Content-Type-Options: "nosniff"
+    hsts:
+      headers:
+        stsSeconds: 31536000
+        stsIncludeSubdomains: true
+        stsPreload: true
+        forceSTSHeader: true
+    ratelimit:
+      rateLimit:
+        average: 20
+        burst: 10
+    blockresponse:
+      headers:
+        customResponseHeaders:
+          Content-Type: "text/plain"
