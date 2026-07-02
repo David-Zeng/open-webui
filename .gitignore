@@ -315,3 +315,7 @@ tags
 
 
 .playwright/
+.cptr
+
+.playwright-cli
+.codegraph
