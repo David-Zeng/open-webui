@@ -143,7 +143,12 @@ RUN set -e; \
     if [ "$USE_CUDA" = "true" ]; then \
     # If you use CUDA the whisper and embedding model will be downloaded on first use
     # fix: pin torch<=2.9.1 - torch 2.10.0 aarch64 wheels cause SIGILL on ARM devices (RPi 4 Cortex-A72) #21349
-    pip3 install 'torch<=2.9.1' torchvision torchaudio --index-url https://download.pytorch.org/whl/$USE_CUDA_DOCKER_VER --no-cache-dir; \
+    # fix: pin torchvision/torchaudio to the matched 2.9.1 release train (torchvision 0.24.1 per
+    # pytorch/vision's compatibility table; torchaudio 2.9.1 shares torch's version numbering) —
+    # leaving them unpinned let uv resolve a newer torchaudio (2.11.0) whose compiled extension
+    # doesn't match torch<=2.9.1's ABI: "undefined symbol: torch_library_impl" (confirmed CI failure
+    # on both amd64/arm64, 2026-07-06, after bumping transformers to 5.13.0 for PII filter tier 3)
+    pip3 install 'torch<=2.9.1' 'torchvision==0.24.1' 'torchaudio==2.9.1' --index-url https://download.pytorch.org/whl/$USE_CUDA_DOCKER_VER --no-cache-dir; \
     uv pip install --system -r requirements.txt --no-cache-dir; \
     python -c "import os; from sentence_transformers import SentenceTransformer; SentenceTransformer(os.environ['RAG_EMBEDDING_MODEL'], device='cpu')"; \
     python -c "import os; from sentence_transformers import SentenceTransformer; SentenceTransformer(os.environ.get('AUXILIARY_EMBEDDING_MODEL', 'TaylorAI/bge-micro-v2'), device='cpu')"; \
@@ -151,7 +156,8 @@ RUN set -e; \
     python -c "import os; import tiktoken; tiktoken.get_encoding(os.environ['TIKTOKEN_ENCODING_NAME'])"; \
     python -c "import nltk; nltk.download('punkt_tab')"; \
     else \
-    pip3 install 'torch<=2.9.1' torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu --no-cache-dir; \
+    # fix: pin torchvision/torchaudio to the matched 2.9.1 release train — see CUDA branch above
+    pip3 install 'torch<=2.9.1' 'torchvision==0.24.1' 'torchaudio==2.9.1' --index-url https://download.pytorch.org/whl/cpu --no-cache-dir; \
     uv pip install --system -r requirements.txt --no-cache-dir; \
     if [ "$USE_SLIM" != "true" ]; then \
     python -c "import os; from sentence_transformers import SentenceTransformer; SentenceTransformer(os.environ['RAG_EMBEDDING_MODEL'], device='cpu')"; \
