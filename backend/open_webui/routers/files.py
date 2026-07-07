@@ -45,6 +45,7 @@ from open_webui.routers.audio import transcribe
 from open_webui.routers.retrieval import ProcessFileForm, process_file
 from open_webui.storage.provider import Storage
 from open_webui.utils.auth import get_admin_user, get_verified_user
+from open_webui.utils.download_access import check_download_ip_allowed
 from open_webui.utils.misc import strict_match_mime_type
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -751,11 +752,15 @@ async def update_file_data_content_by_id(
 
 @router.get('/{id}/content')
 async def get_file_content_by_id(
+    request: Request,
     id: str,
     user=Depends(get_verified_user),
     attachment: bool = Query(False),
     db: AsyncSession = Depends(get_async_session),
 ):
+    allowlist = await Config.get('downloads.ip_allowlist', '')
+    check_download_ip_allowed(request, user, allowlist)
+
     file = await Files.get_file_by_id(id, db=db)
 
     if not file:
@@ -814,8 +819,11 @@ async def get_file_content_by_id(
 
 @router.get('/{id}/content/html')
 async def get_html_file_content_by_id(
-    id: str, user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)
+    request: Request, id: str, user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)
 ):
+    allowlist = await Config.get('downloads.ip_allowlist', '')
+    check_download_ip_allowed(request, user, allowlist)
+
     file = await Files.get_file_by_id(id, db=db)
 
     if not file:
@@ -863,8 +871,11 @@ async def get_html_file_content_by_id(
 
 @router.get('/{id}/content/{file_name}')
 async def get_file_content_by_id(
-    id: str, user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)
+    request: Request, id: str, user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)
 ):
+    allowlist = await Config.get('downloads.ip_allowlist', '')
+    check_download_ip_allowed(request, user, allowlist)
+
     file = await Files.get_file_by_id(id, db=db)
 
     if not file:
