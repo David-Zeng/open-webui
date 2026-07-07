@@ -2388,6 +2388,16 @@ ENABLE_API_KEYS_ENDPOINT_RESTRICTIONS = (
 
 API_KEYS_ALLOWED_ENDPOINTS = os.getenv('API_KEYS_ALLOWED_ENDPOINTS', os.getenv('API_KEY_ALLOWED_ENDPOINTS', ''))
 
+####################################
+# Downloads
+####################################
+
+# Comma-separated list of IPs and/or CIDR ranges (e.g. "203.0.113.5,10.1.1.0/24")
+# allowed to download files/chat exports if the requesting user is not an admin.
+# Empty string = no restriction (matches this fork's fail-open-by-default convention
+# for opt-in security features — see ENABLE_API_KEYS_ENDPOINT_RESTRICTIONS above).
+DOWNLOAD_IP_ALLOWLIST = os.getenv('DOWNLOAD_IP_ALLOWLIST', '')
+
 JWT_EXPIRES_IN = os.getenv('JWT_EXPIRES_IN', '4w')
 
 if JWT_EXPIRES_IN == '-1':
@@ -3054,6 +3064,7 @@ DEFAULT_CONFIG = {
     'auth.enable_api_keys': ENABLE_API_KEYS,
     'auth.api_key.endpoint_restrictions': ENABLE_API_KEYS_ENDPOINT_RESTRICTIONS,
     'auth.api_key.allowed_endpoints': API_KEYS_ALLOWED_ENDPOINTS,
+    'downloads.ip_allowlist': DOWNLOAD_IP_ALLOWLIST,
     'auth.jwt_expiry': JWT_EXPIRES_IN,
     'oauth.enable_signup': ENABLE_OAUTH_SIGNUP,
     'oauth.auto_redirect': OAUTH_AUTO_REDIRECT,
