@@ -92,6 +92,7 @@ ADMIN_CONFIG_KEYS = {
     'ENABLE_API_KEYS': 'auth.enable_api_keys',
     'ENABLE_API_KEYS_ENDPOINT_RESTRICTIONS': 'auth.api_key.endpoint_restrictions',
     'API_KEYS_ALLOWED_ENDPOINTS': 'auth.api_key.allowed_endpoints',
+    'DOWNLOAD_IP_ALLOWLIST': 'downloads.ip_allowlist',
     'DEFAULT_USER_ROLE': 'ui.default_user_role',
     'DEFAULT_GROUP_ID': 'ui.default_group_id',
     'JWT_EXPIRES_IN': 'auth.jwt_expiry',
@@ -1130,6 +1131,7 @@ class AdminConfig(BaseModel):
     ENABLE_API_KEYS: bool
     ENABLE_API_KEYS_ENDPOINT_RESTRICTIONS: bool
     API_KEYS_ALLOWED_ENDPOINTS: str
+    DOWNLOAD_IP_ALLOWLIST: str
     DEFAULT_USER_ROLE: str
     DEFAULT_GROUP_ID: str
     JWT_EXPIRES_IN: str
