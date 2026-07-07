@@ -12,6 +12,12 @@ docs/plans/2026-07-07-download-ip-allowlist.md for the live verification).
 Do not read X-Forwarded-For here directly: uvicorn's ProxyHeadersMiddleware
 already did that rewrite once, upstream of this code, and re-parsing it here
 would trust a client-supplied header a second time for no benefit.
+
+When wiring check_download_ip_allowed() into a route, check whether that
+route's logic sits inside a broad `except Exception:` handler. If so, add an
+`except HTTPException: raise` guard above it first (if one isn't already
+present) — otherwise the 403 raised here gets swallowed and re-raised as a
+misleading 400. See chats.py's export_chat_stats for a worked example.
 """
 
 import ipaddress

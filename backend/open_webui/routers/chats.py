@@ -37,6 +37,7 @@ from open_webui.utils.access_control import filter_allowed_access_grants, has_pe
 from open_webui.utils.access_control.folders import has_folder_access
 from open_webui.utils.auth import get_admin_user, get_verified_user
 from open_webui.utils.context_compaction import compact_chat_branch
+from open_webui.utils.download_access import check_download_ip_allowed
 from open_webui.utils.misc import get_message_list
 from open_webui.utils.models import get_all_models
 from pydantic import BaseModel
@@ -493,6 +494,11 @@ async def export_chat_stats(
             filter['updated_at'] = updated_at
 
         if stream:
+            # Only this branch serves a real file download (Content-Disposition: attachment);
+            # the paginated `else` branch below is UI-facing JSON and intentionally ungated.
+            allowlist = await Config.get('downloads.ip_allowlist', '')
+            check_download_ip_allowed(request, user, allowlist)
+
             return StreamingResponse(
                 generate_chat_stats_jsonl_generator(user.id, filter),
                 media_type='application/x-ndjson',
@@ -506,6 +512,10 @@ async def export_chat_stats(
 
             return ChatStatsExportList(items=chat_stats_export_list, total=total, page=page)
 
+    except HTTPException:
+        # Without this, the broad `except Exception` below would swallow the 403 raised
+        # by check_download_ip_allowed above and re-raise it as a misleading 400.
+        raise
     except Exception as e:
         log.debug(f'Error exporting chat stats: {e}')
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.DEFAULT())
@@ -849,7 +859,10 @@ async def generate_chat_export_ndjson(user_id: str):
 
 
 @router.get('/all')
-async def get_user_chats(user=Depends(get_verified_user)):
+async def get_user_chats(request: Request, user=Depends(get_verified_user)):
+    allowlist = await Config.get('downloads.ip_allowlist', '')
+    check_download_ip_allowed(request, user, allowlist)
+
     return StreamingResponse(
         generate_chat_export_ndjson(user.id),
         media_type='application/x-ndjson',
