@@ -61,7 +61,12 @@ transformers==5.13.0  # bumped from 5.5.4 — 5.5.4 doesn't recognize openai/pri
 sentence-transformers==5.5.1
 accelerate==1.13.0
 pyarrow==20.0.0 # fix: pin pyarrow version to 20 for rpi compatibility #15897
-einops==0.8.2 
+einops==0.8.2
+
+# PII filter tier 2 long-input fallback: Presidio (spaCy backend, ~0.2s on 11K chars
+# vs ettin's ~18s, no context window limit). Used when input > ner_max_chars.
+presidio_analyzer==2.2.36
+spacy==3.8.13
 
 ftfy==6.3.1
 chardet==7.4.3
