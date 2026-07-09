@@ -65,7 +65,7 @@ einops==0.8.2
 
 # PII filter tier 2 long-input fallback: Presidio (spaCy backend, ~0.2s on 11K chars
 # vs ettin's ~18s, no context window limit). Used when input > ner_max_chars.
-presidio_analyzer==2.2.36
+presidio_analyzer==2.2.363
 spacy==3.8.13
 
 ftfy==6.3.1
