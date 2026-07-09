@@ -142,6 +142,22 @@ class ModelForm(BaseModel):
     is_active: bool = True
 
 
+# zr-au instance policy: every newly created workspace model gets PII
+# redaction on by default and explicit native tool-calling, rather than
+# relying on each admin/integration remembering to set them. Fill-if-absent
+# only — never overrides a value the creating caller explicitly provided,
+# and only fires once per model id (insert_new_model, not the update path),
+# so it can never silently revert a later admin edit.
+def _apply_new_model_defaults(dumped: dict) -> None:
+    meta = dumped.setdefault('meta', {})
+    default_filter_ids = meta.setdefault('defaultFilterIds', [])
+    if 'pii_filter' not in default_filter_ids:
+        default_filter_ids.append('pii_filter')
+
+    params = dumped.setdefault('params', {})
+    params.setdefault('function_calling', 'native')
+
+
 class ModelsTable:
     async def _get_access_grants(self, model_id: str, db: AsyncSession | None = None) -> list[AccessGrantModel]:
         return await AccessGrants.get_grants_by_resource('model', model_id, db=db)
@@ -163,9 +179,11 @@ class ModelsTable:
     ) -> ModelModel | None:
         try:
             async with get_async_db_context(db) as db:
+                dumped = form_data.model_dump(exclude={'access_grants'})
+                _apply_new_model_defaults(dumped)
                 result = Model(
                     **{
-                        **form_data.model_dump(exclude={'access_grants'}),
+                        **dumped,
                         'user_id': user_id,
                         'created_at': int(time.time()),
                         'updated_at': int(time.time()),
