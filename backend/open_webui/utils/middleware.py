@@ -3369,6 +3369,8 @@ async def outlet_filter_handler(ctx):
             '__metadata__': metadata,
             '__request__': request,
             '__model__': model,
+            '__chat_id__': chat_id,
+            '__message_id__': message_id,
         }
 
         filter_ids = await get_sorted_filter_ids(request, model, metadata.get('filter_ids', []))
