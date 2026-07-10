@@ -112,11 +112,13 @@ LDAP_VALIDATE_CERT=True
 LDAP_APP_DN=cn=service-account,dc=yourcompany,dc=com
 LDAP_APP_PASSWORD=<service account password>
 LDAP_SEARCH_BASE=ou=users,dc=yourcompany,dc=com
-LDAP_SEARCH_FILTER=uid={0}
+LDAP_SEARCH_FILTER=(memberOf=cn=staff,ou=groups,dc=yourcompany,dc=com)
 LDAP_ATTRIBUTE_FOR_USERNAME=uid
 LDAP_ATTRIBUTE_FOR_MAIL=mail
 ENABLE_LDAP_GROUP_MANAGEMENT=True
 ```
+
+`LDAP_SEARCH_FILTER` is appended as an additional `(&...)` clause alongside the username match built from `LDAP_ATTRIBUTE_FOR_USERNAME` — it is not a template and does not take a `{0}`-style placeholder. Leave it empty to match on username alone, or use it to further restrict logins to a group/OU as shown above.
 
 ### Option C: Trusted Reverse Proxy Headers (Tailscale / Nginx SSO)
 
@@ -143,7 +145,7 @@ WEBUI_AUTH_TRUSTED_ROLE_HEADER=X-Remote-User-Role
 
 ## 8. Rate Limiting
 
-Built-in: **5 login attempts per 3 minutes** (sliding window). No configuration required — enforced automatically on the sign-in endpoint, using Redis if available.
+Built-in: **15 login attempts per 3 minutes** (sliding window). No configuration required — enforced automatically on the sign-in endpoint, using Redis if available.
 
 ---
 
