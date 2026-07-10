@@ -2440,33 +2440,23 @@ async def get_manifest_json():
             r.raise_for_status()
             return await r.json()
     else:
-        return {
-            'name': app.state.WEBUI_NAME,
-            'short_name': app.state.WEBUI_NAME,
-            'description': f'{app.state.WEBUI_NAME} is an open, extensible, user-friendly interface for AI that adapts to your workflow.',
-            'start_url': '/',
-            'display': 'standalone',
-            'background_color': '#343541',
-            'icons': [
-                {
-                    'src': '/static/logo.png',
-                    'type': 'image/png',
-                    'sizes': '500x500',
-                    'purpose': 'any',
-                },
-                {
-                    'src': '/static/logo.png',
-                    'type': 'image/png',
-                    'sizes': '500x500',
-                    'purpose': 'maskable',
-                },
-            ],
-            'share_target': {
+        # static/manifest.json is the source of truth for branding (name, colors,
+        # icons); name/short_name are overridden here so a WEBUI_NAME env change
+        # takes effect without needing a matching edit to the JSON file.
+        manifest_path = STATIC_DIR / 'manifest.json'
+        with open(manifest_path) as f:
+            manifest = json.load(f)
+        manifest['name'] = app.state.WEBUI_NAME
+        manifest['short_name'] = app.state.WEBUI_NAME
+        manifest.setdefault(
+            'share_target',
+            {
                 'action': '/',
                 'method': 'GET',
                 'params': {'text': 'shared'},
             },
-        }
+        )
+        return manifest
 
 
 @app.get('/opensearch.xml')
