@@ -43,6 +43,8 @@ fi
 MISSING=()
 
 # ImageMagick — non-optional
+__CONVERT=()
+__IDENTIFY=()
 if command -v magick >/dev/null 2>&1; then
     # ImageMagick v7+ unified CLI
     __CONVERT=("magick")
@@ -55,7 +57,7 @@ else
 fi
 
 # Verify identify is usable
-if [ ${#__IDENTIFY[@]:-0} -gt 0 ]; then
+if [ ${#__IDENTIFY[@]} -gt 0 ]; then
     if ! "${__IDENTIFY[@]}" -version >/dev/null 2>&1; then
         MISSING+=("ImageMagick identify (not functional)")
     fi
@@ -94,16 +96,26 @@ fi
 
 # --- Rasterize Functions ---
 
-# Square rasterize (forces WxH square — for favicons, PWA icons)
+# Square rasterize (forces WxH square — for favicons, PWA icons).
+# Fits by aspect ratio first, then centers on a transparent square canvas,
+# so non-square source logos (e.g. wide wordmarks) aren't stretched.
 inkscape_rasterize() {
     local input="$1" output="$2" size="$3"
-    inkscape "$input" --export-type=png --export-filename="$output" \
-        --export-width="$size" --export-height="$size" 2>/dev/null
+    local fit="${output}.fit.png"
+    inkscape "$input" --export-type=png --export-filename="$fit" \
+        --export-width="$size" --export-height="$size" --export-area-page 2>/dev/null
+    "${__CONVERT[@]}" -size "${size}x${size}" xc:none \
+        "$fit" -gravity center -composite "$output"
+    rm -f "$fit"
 }
 
 rsvg_rasterize() {
     local input="$1" output="$2" size="$3"
-    rsvg-convert -w "$size" -h "$size" "$input" -o "$output"
+    local fit="${output}.fit.png"
+    rsvg-convert -a -w "$size" -h "$size" "$input" -o "$fit"
+    "${__CONVERT[@]}" -size "${size}x${size}" xc:none \
+        "$fit" -gravity center -composite "$output"
+    rm -f "$fit"
 }
 
 # Aspect-ratio-preserving rasterize (height only, width auto-scales)
@@ -175,9 +187,9 @@ echo "🖼️  Generating logo..."
 LOGO_HEIGHT=200
 $__RASTERIZE_FIT "$LOGO_SVG" "$OUTPUT_DIR/logo.png" "$LOGO_HEIGHT"
 
-WIDTH=$("${__IDENTIFY[@]}" -format '%w' "$OUTPUT_DIR/logo.png")
+WIDTH=$("${__IDENTIFY[@]}" -format '%w' "$OUTPUT_DIR/logo.png" 2>/dev/null) || WIDTH=""
 
-if [ -z "$WIDTH" ] || [ "$WIDTH" -eq 0 ]; then
+if [ -z "$WIDTH" ] || [ "$WIDTH" -eq 0 ] 2>/dev/null; then
     echo "Error: Could not determine logo dimensions from rasterized output." >&2
     exit 1
 fi
