@@ -135,12 +135,14 @@ class Config(Base):
 
     @staticmethod
     async def get(key: str, default: Any = None) -> Any:
-        """Get a config value by key. Returns default if not set."""
+        """Get a config value by key. Returns default if not set or stored as null."""
         if not Config.persistent_enabled_for(key):
             return Config.default_value(key, default)
         async with get_async_db() as db:
             row = await db.get(Config, key)
-            return row.value if row else Config.default_value(key, default)
+            if row is None or row.value is None:
+                return Config.default_value(key, default)
+            return row.value
 
     @staticmethod
     async def get_many(*keys: str) -> dict:
