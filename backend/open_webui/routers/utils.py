@@ -10,6 +10,7 @@ from open_webui.models.chats import ChatTitleMessagesForm
 from open_webui.models.config import Config
 from open_webui.utils.auth import get_admin_user, get_verified_user
 from open_webui.utils.code_interpreter import execute_code_jupyter
+from open_webui.utils.download_access import check_download_ip_allowed
 from open_webui.utils.misc import get_gravatar_url
 from open_webui.utils.pdf_generator import PDFGenerator
 from pydantic import BaseModel
@@ -79,7 +80,12 @@ class ChatForm(BaseModel):
 
 
 @router.post('/pdf')
-async def download_chat_as_pdf(form_data: ChatTitleMessagesForm, user=Depends(get_verified_user)):
+async def download_chat_as_pdf(
+    request: Request, form_data: ChatTitleMessagesForm, user=Depends(get_verified_user)
+):
+    allowlist = await Config.get('downloads.ip_allowlist', '')
+    check_download_ip_allowed(request, user, allowlist)
+
     try:
         pdf_bytes = PDFGenerator(form_data).generate_chat_pdf()
 
