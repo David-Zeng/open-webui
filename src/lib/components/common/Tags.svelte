@@ -7,7 +7,7 @@
 
 	type Tag = { name: string };
 
-	export let tags: Tag[] = [];
+	export let tags: (Tag | string | null | undefined)[] = [];
 	export let suggestionTags: (Tag | string | null | undefined)[] = [];
 	export let disabled = false;
 
@@ -16,7 +16,9 @@
 	let popupElement: HTMLDivElement | null = null;
 	let suggestionsOpen = false;
 
-	$: tagNames = new Set((tags ?? []).map((tag) => tag.name.toLowerCase()));
+	$: tagNames = new Set(
+		(tags ?? []).map((tag) => (typeof tag === 'string' ? tag : (tag?.name ?? '')).toLowerCase())
+	);
 	$: filteredSuggestionTags = (suggestionTags ?? [])
 		.map((tag) => (typeof tag === 'string' ? tag : (tag?.name ?? '')).trim())
 		.filter(
