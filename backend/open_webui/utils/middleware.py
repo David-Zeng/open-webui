@@ -214,7 +214,10 @@ def _split_tool_calls(
 
     expanded = []
     for tool_call in tool_calls:
-        arguments = tool_call.get('function', {}).get('arguments', '')
+        # .get(key, default) only applies when the key is absent — some
+        # providers send 'arguments': null explicitly for zero-argument
+        # tool calls, so also coerce an explicit None to '' here.
+        arguments = tool_call.get('function', {}).get('arguments') or ''
         split_arguments = split_json_objects(arguments)
 
         if len(split_arguments) <= 1:
@@ -4238,8 +4241,14 @@ async def streaming_chat_response_handler(response, ctx):
                                                 if current_response_tool_call is None:
                                                     # Add the new tool call
                                                     delta_tool_call.setdefault('function', {})
-                                                    delta_tool_call['function'].setdefault('name', '')
-                                                    delta_tool_call['function'].setdefault('arguments', '')
+                                                    # setdefault only fills a missing key — some providers
+                                                    # (e.g. DeepInfra, for zero-argument tool calls) send
+                                                    # 'arguments': null explicitly, which setdefault leaves
+                                                    # untouched, so normalize None -> '' here too.
+                                                    if delta_tool_call['function'].get('name') is None:
+                                                        delta_tool_call['function']['name'] = ''
+                                                    if delta_tool_call['function'].get('arguments') is None:
+                                                        delta_tool_call['function']['arguments'] = ''
                                                     response_tool_calls.append(delta_tool_call)
                                                 else:
                                                     # Update the existing tool call
