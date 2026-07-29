@@ -46,6 +46,9 @@
 	let ENABLE_OLLAMA_API: null | boolean = null;
 
 	let connectionsConfig: any = null;
+	let connectionsLoading = false;
+	let connectionsLoaded = false;
+	let connectionsLoadError: string | null = null;
 
 	let pipelineUrls: Record<string, boolean> = {};
 	let showAddOpenAIConnectionModal = false;
@@ -138,23 +141,22 @@
 		await updateOllamaHandler();
 	};
 
-	onMount(async () => {
-		if ($user?.role === 'admin') {
-			let ollamaConfig: any = {};
-			let openaiConfig: any = {};
+	const loadConnections = async () => {
+		if (connectionsLoading || connectionsLoaded) {
+			return;
+		}
 
-			await Promise.all([
-				(async () => {
-					ollamaConfig = await getOllamaConfig(localStorage.token);
-				})(),
-				(async () => {
-					openaiConfig = await getOpenAIConfig(localStorage.token);
-				})(),
-				(async () => {
-					connectionsConfig = await getConnectionsConfig(localStorage.token);
-				})()
+		connectionsLoading = true;
+		connectionsLoadError = null;
+
+		try {
+			const [ollamaConfig, openaiConfig, loadedConnectionsConfig] = await Promise.all([
+				getOllamaConfig(localStorage.token),
+				getOpenAIConfig(localStorage.token),
+				getConnectionsConfig(localStorage.token)
 			]);
 
+			connectionsConfig = loadedConnectionsConfig;
 			ENABLE_OPENAI_API = openaiConfig.ENABLE_OPENAI_API;
 			ENABLE_OLLAMA_API = ollamaConfig.ENABLE_OLLAMA_API;
 
@@ -193,7 +195,26 @@
 					}
 				}
 			}
+
+			connectionsLoaded = true;
+		} catch (error) {
+			const message = error instanceof Error ? error.message : `${error}`;
+			const loadError = message || $i18n.t('Failed to load connection settings');
+			connectionsLoadError = loadError;
+			toast.error(loadError);
+		} finally {
+			connectionsLoading = false;
 		}
+	};
+
+	onMount(() => {
+		const unsubscribe = user.subscribe((currentUser) => {
+			if (currentUser?.role === 'admin') {
+				void loadConnections();
+			}
+		});
+
+		return unsubscribe;
 	});
 
 	const submitHandler = async () => {
@@ -382,6 +403,17 @@
 					/>
 				</AdminSettingRow>
 			</AdminSettingSection>
+		{:else if connectionsLoadError}
+			<div class="flex h-full flex-col items-center justify-center gap-3 text-center">
+				<div class="text-xs text-red-500">{connectionsLoadError}</div>
+				<button
+					class="rounded-full bg-gray-100 px-3 py-1.5 text-xs text-gray-700 hover:bg-gray-200 dark:bg-white/10 dark:text-gray-200 dark:hover:bg-white/15"
+					type="button"
+					on:click={loadConnections}
+				>
+					{$i18n.t('Retry')}
+				</button>
+			</div>
 		{:else}
 			<div class="flex h-full justify-center">
 				<div class="my-auto">
