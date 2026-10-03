@@ -21,19 +21,34 @@ requests:
     # Force reasoning effort for subscription-backed chat models (as deployed on the Pi).
     # Effort ladder: none → low → medium → high → xhigh → max (model-dependent — check the model page).
     # Both protocol entries cover incoming (openai) and upstream (codex) interpretation; unmatched are ignored.
+    # Rules are disjoint by design (no overlapping model patterns) so precedence never matters.
+    # Final matrix: luna → max, terra → medium, sol + astra → low.
     override:
+      # max: all luna variants (incl. gpt-5.6-luna, gpt-6-luna, future snapshots)
       - models:
-          - name: "*luna"
+          - name: "gpt-*-luna"
             protocol: "openai"
-          - name: "*luna"
-            protocol: "codex"
-          - name: "gpt-5.6*"
-            protocol: "openai"
-          - name: "gpt-5.6*"
-            protocol: "codex"
-          - name: "gpt-6*"
-            protocol: "openai"
-          - name: "gpt-6*"
+          - name: "gpt-*-luna"
             protocol: "codex"
         params:
           "reasoning.effort": "max"
+      # medium: all terra variants (explicit; matches upstream default today)
+      - models:
+          - name: "gpt-*-terra"
+            protocol: "openai"
+          - name: "gpt-*-terra"
+            protocol: "codex"
+        params:
+          "reasoning.effort": "medium"
+      # low: all sol + astra variants (incl. gpt-5.6-sol, gpt-6-sol, gpt-6.1-sol, gpt-6-astra)
+      - models:
+          - name: "gpt-*-sol"
+            protocol: "openai"
+          - name: "gpt-*-sol"
+            protocol: "codex"
+          - name: "gpt-*-astra"
+            protocol: "openai"
+          - name: "gpt-*-astra"
+            protocol: "codex"
+        params:
+          "reasoning.effort": "low"
