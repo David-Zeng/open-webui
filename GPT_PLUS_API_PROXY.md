@@ -90,3 +90,25 @@ Then in Open WebUI (server's admin UI): Connections → OpenAI → add connectio
 - API key: the proxy's own client key (`access.api-keys`)
 
 Remote cautions: never publish `8317`/`8085` on `0.0.0.0`; keep `allow-remote` semantics understood (tunnel access needs it); rotate the client key if it leaks — it can spend the linked subscription quota. Real keys and token files are gitignored (`cliproxy/config.yaml`, `cliproxy/auths/`, `cliproxy/logs/`).
+
+## Pi deployment — deployed & verified (Oct 2026)
+
+Deployed to the Pi (`pi@10.1.1.148`) alongside the existing OWUI stack:
+
+- **Location:** `/home/pi/git_repo/gcp_service/instances/rpi/rpi4_4gb_148/` — `cli-proxy-api` joins the `rpi4_4gb_148` compose project (`open-webui-app1`, `ollama`, `litellm`, `redis`, `pipelines`, `open-terminal`) via the `-f docker-compose.cliproxy.yaml` override; survives Watchtower/restarts
+- **Shipped:** production `cliproxy/config.yaml` (fresh keys, gitignored), OAuth token file copied into `cliproxy/auths/` (portable — picked up by the container's file watcher)
+- **Verified:** `1 clients (1 auth files)` at startup; `/v1/models` → 14 Codex models; 401 without key; `open-webui-app1 → http://cli-proxy-api:8317/v1` connectivity confirmed (14 models container-to-container)
+
+**Reasoning effort rule** (`requests.payload.override` in config.yaml): forces `reasoning.effort: max` on `*luna`, `gpt-5.6*`, `gpt-6*` (both `openai` + `codex` protocol entries cover incoming/upstream interpretation). Hot-reload confirmed; verified loaded via mgmt API (`reasoning.effort":"max"`). Effort ladder per OpenAI docs: `none → low → medium → high → xhigh → max` (model-dependent; luna supports all). A/B note: easy prompts floor out adaptively (~30 reasoning tokens at either `high` or `max`) — the difference only shows on hard tasks. `max` accepted upstream without error. Image models are not matched.
+
+**Security verification (public-web risk: zero):**
+- Port bindings published LAN-wide on `0.0.0.0` (user choice: trusted home LAN)
+- Internet side verified closed: external TCP probes from 6 check-host.net vantage points (CA/SI/UA/IR/PL/SE) all timed out on `115.70.50.145:8317` and `:1455` — no router port-forward/UPnP exposure
+- Cloudflare tunnel (token-based; ingress lives in the CF dashboard) maps **only** `openwebui.dzzz.ink/*` → `host.docker.internal:3001` (verified in dashboard) — proxy ports are not routed to any public hostname
+- Residual: LAN users with the client key can spend Plus quota — keep keys private; rotate in `cliproxy/config.yaml` + OWUI connection settings if leaked
+
+**Ops notes:**
+- Management panel: `http://10.1.1.148:8317/management.html` (LAN) or via `ssh -L 8317:127.0.0.1:8317 pi@10.1.1.148`; login key = `management.secret-key` in `cliproxy/config.yaml`
+- OWUI connection: base URL `http://cli-proxy-api:8317/v1`, key = `access.api-keys` entry
+- Config edits hot-reload (file watcher); the server rewrites config.yaml on panel saves (bcrypt-hashes the management secret) — re-check file format after edits
+- Logs: `docker logs cli-proxy-api` on the Pi; model catalog auto-refreshes every 3h

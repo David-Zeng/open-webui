@@ -15,3 +15,25 @@ oauth:
 management:
   secret-key: "CHANGE_ME_MANAGEMENT_KEY"  # openssl rand -hex 16 — panel login at /management.html
   allow-remote: true                       # needed behind container NAT / SSH tunnels; port stays localhost-published
+
+requests:
+  payload:
+    # Force reasoning effort for subscription-backed chat models (as deployed on the Pi).
+    # Effort ladder: none → low → medium → high → xhigh → max (model-dependent — check the model page).
+    # Both protocol entries cover incoming (openai) and upstream (codex) interpretation; unmatched are ignored.
+    override:
+      - models:
+          - name: "*luna"
+            protocol: "openai"
+          - name: "*luna"
+            protocol: "codex"
+          - name: "gpt-5.6*"
+            protocol: "openai"
+          - name: "gpt-5.6*"
+            protocol: "codex"
+          - name: "gpt-6*"
+            protocol: "openai"
+          - name: "gpt-6*"
+            protocol: "codex"
+        params:
+          "reasoning.effort": "max"
