@@ -3,6 +3,10 @@ yarn.lock
 .DS_Store
 .codegraph/
 .playwright-cli/
+# CLIProxyAPI local runtime files (real keys + OAuth tokens)
+cliproxy/config.yaml
+cliproxy/auths/
+cliproxy/logs/
 node_modules
 /build
 /.svelte-kit

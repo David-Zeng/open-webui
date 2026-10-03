@@ -60,3 +60,33 @@ Dead/risky (do not use): `acheong08/revChatGPT` (archived 2023), `pandora-next` 
 | Reverse-engineered web proxies | High ban + legal/ToS risk, mostly dead | None |
 
 **Recommendation:** for production use an API key; CLIProxyAPI only for personal/experimental use, local-only, with one dedicated account.
+
+## Tested local integration (Oct 2026)
+
+Verified on podman (machine + compose provider) with `docker-compose.cliproxy.yaml`:
+
+- `eceasy/cli-proxy-api:latest` starts via compose; config + `auths/` mounted from `cliproxy/`
+- `GET /v1/models` with the proxy client key → model list (gpt-6.x / gpt-5.x / gpt-image / codex-auto-review) after Codex OAuth login
+- Without key → 401; management API enforces its secret
+- Gotchas encountered:
+  - Management panel login fails with 403 "remote management disabled" behind container NAT → set `management.allow-remote: true` (ports stay localhost-published)
+  - OAuth callback redirects to `localhost:1455` (and similar ports for other providers) → those callback ports must be published (see compose override)
+  - The server rewrites `config.yaml` on save (hashes the management secret); expect the file to change format after first save
+
+## Remote-server deployment
+
+Files: `docker-compose.cliproxy.yaml` + `cliproxy/config.yaml` (create from `cliproxy/config.example.yaml` — regenerate both keys), empty `cliproxy/auths/` and `cliproxy/logs/`.
+
+```bash
+docker compose -f docker-compose.yaml -f docker-compose.cliproxy.yaml up -d cli-proxy-api
+```
+
+Attach the OAuth token (either):
+- **Copy the token file** from a machine where OAuth login already worked: `scp cliproxy/auths/codex-*.json server:…/cliproxy/auths/` — tokens are portable; the container watches the auth dir
+- **Or SSH-tunnel login:** `ssh -L 8317:127.0.0.1:8317 -L 1455:127.0.0.1:1455 <server>` → open `http://127.0.0.1:8317/management.html` → management key → provider OAuth (tunneling `1455` makes the `localhost:1455` callback work)
+
+Then in Open WebUI (server's admin UI): Connections → OpenAI → add connection with
+- Base URL `http://cli-proxy-api:8317/v1` — **service name, not localhost** (container-to-container over the compose network; no published ports needed)
+- API key: the proxy's own client key (`access.api-keys`)
+
+Remote cautions: never publish `8317`/`8085` on `0.0.0.0`; keep `allow-remote` semantics understood (tunnel access needs it); rotate the client key if it leaks — it can spend the linked subscription quota. Real keys and token files are gitignored (`cliproxy/config.yaml`, `cliproxy/auths/`, `cliproxy/logs/`).

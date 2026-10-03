@@ -1,0 +1,17 @@
+# CLIProxyAPI config template (v8 layout) — copy to cliproxy/config.yaml and fill in.
+# Full reference: https://github.com/router-for-me/CLIProxyAPI/blob/main/config.example.yaml
+
+server:
+  host: ""        # bind all interfaces inside the container; restrict exposure via compose port publishing
+  port: 8317
+
+access:
+  api-keys:
+    - "CHANGE_ME_PROXY_CLIENT_KEY"   # openssl rand -hex 24 — key Open WebUI uses to call this proxy
+
+oauth:
+  auth-dir: "~/.cli-proxy-api"       # mounted from cliproxy/auths/ — OAuth token files land here
+
+management:
+  secret-key: "CHANGE_ME_MANAGEMENT_KEY"  # openssl rand -hex 16 — panel login at /management.html
+  allow-remote: true                       # needed behind container NAT / SSH tunnels; port stays localhost-published
