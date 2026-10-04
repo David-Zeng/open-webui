@@ -112,3 +112,9 @@ Deployed to the Pi (`pi@10.1.1.148`) alongside the existing OWUI stack:
 - OWUI connection: base URL `http://cli-proxy-api:8317/v1`, key = `access.api-keys` entry
 - Config edits hot-reload (file watcher); the server rewrites config.yaml on panel saves (bcrypt-hashes the management secret) — re-check file format after edits
 - Logs: `docker logs cli-proxy-api` on the Pi; model catalog auto-refreshes every 3h
+
+## Fork branch state (DJ)
+
+- **Deployment artifacts live in the fork's DJ branch** (user decision: keep everything) — `GPT_PLUS_API_PROXY.md`, `HANDOFF_CLIPROXYAPI.md`, `docker-compose.cliproxy.yaml`, `cliproxy/config.example.yaml` — because the Pi's working copy (`~/git_repo/gcp_service/...`) is **not** under version control; this repo is the recovery source if the Pi dies. Live secrets (`cliproxy/config.yaml`, `cliproxy/auths/`) are gitignored, machine-local only.
+- **Upstream sync:** `origin/main` (synced with open-webui upstream) merged into DJ on Oct 2026 (`9bf8f6d7e`, 327 commits) — merge was clean, zero conflicts; DJ-specific files (workflow, icons, cliproxy docs) all intact.
+- **Agent-facing runbook** (`HANDOFF_CLIPROXYAPI.md`) is also mirrored to the `David-Zeng/cloudyou3` repo (`03_doco/cliproxyapi_install_handoff.md`) for cross-repo discoverability.
