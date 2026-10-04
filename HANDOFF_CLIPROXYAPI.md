@@ -44,8 +44,11 @@ management:
   allow-remote: true   # REQUIRED behind container NAT / SSH tunnels; see gotcha G1
 requests:
   payload:
-    # Optional: force reasoning effort per model variant. Disjoint patterns so precedence never matters.
-    # Ladder: none → low → medium → high → xhigh → max (model-dependent).
+    # Optional: force reasoning effort per model variant.
+    # Ladder: none → low → medium → high → xhigh → max (model-dependent — check the model page).
+    # Write rules FROM the actual /v1/models list: keep patterns disjoint (never overlapping),
+    # use gpt-*-<variant> (not bare *<variant>) to avoid matching other providers' models,
+    # and exclude non-chat models (gpt-image-*, codex-auto-review — they'd 400 on effort params).
     override:
       - models: [{name: "gpt-*-luna", protocol: "openai"}, {name: "gpt-*-luna", protocol: "codex"}]
         params: {"reasoning.effort": "max"}
@@ -71,7 +74,9 @@ services:
       - ./cliproxy/logs:/CLIProxyAPI/logs
     ports:
       - "127.0.0.1:8317:8317"   # publish ONLY for host-side clients / panel access
-      - "127.0.0.1:1455:1455"   # OAuth callback port (needed for browser OAuth via tunnel)
+      - "127.0.0.1:1455:1455"   # OAuth callback port for OpenAI/Codex
+      # Other providers' OAuth callbacks (from the official compose): 54545, 51121, 11451
+      # → publish/tunnel the one matching the provider you log into (Claude/Gemini/Kimi/Grok)
     restart: unless-stopped
 ```
 
@@ -129,6 +134,8 @@ Admin Panel → Settings → Connections → OpenAI API → **+**:
 - **G6 — ARM hosts:** image is multi-arch, but verify on first pull; if missing, build from source on the host.
 - **G7 — Browser LAN access (macOS Sequoia+):** per-app **Local Network permission** gates LAN IPs; apps appear in the permission list lazily (only after triggering the prompt). Firefox may never appear without updating it first. Chrome/Safari usually fine. Terminal `curl` is a separate grant.
 - **G8 — Podman specifics:** machine may be stopped after idle (`podman machine start`); use the machine API socket as `DOCKER_HOST` with the docker compose binary.
+- **G9 — Chat Completions + tools:** on some models (e.g. gpt-6-luna), Chat Completions only supports function calling with `reasoning_effort: none` — use the Responses-style path or accept `none` for tool calls.
+- **G10 — Verifying effort rules / adaptive floor:** confirm loaded via `curl -H "Authorization: Bearer <MGMT_KEY>" $URL/v0/management/config | grep -o "reasoning.effort[^,}]*"`. A/B-testing efforts with an easy prompt is inconclusive — reasoning is adaptive and floors out (~30 tokens at any effort); only hard tasks reveal the difference.
 
 ## Security checklist
 
@@ -136,6 +143,7 @@ Admin Panel → Settings → Connections → OpenAI API → **+**:
 - [ ] Strong client key + management key (rotate on leak — client key spend = subscription quota)
 - [ ] No public-web path: if a reverse proxy / Cloudflare tunnel exists, verify its ingress rules don't route the proxy ports; verify with an external TCP probe (e.g. `check-host.net/check-tcp?host=<PUBLIC_IP>:8317` — async API, poll the result) — expect timeouts
 - [ ] Personal use only; never share the endpoint/key (account sharing = clearest ToS violation → ban risk)
+- [ ] If committing deployment files to a repo: gitignore the real secrets — `cliproxy/config.yaml`, `cliproxy/auths/`, `cliproxy/logs/` (commit only `config.example.yaml` with placeholders)
 - [ ] Stop at the first 403/verification challenge from upstream rather than retrying through it
 
 ## Where this was validated
