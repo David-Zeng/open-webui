@@ -112,6 +112,7 @@ Deployed to the Pi (`pi@10.1.1.148`) alongside the existing OWUI stack:
 - OWUI connection: base URL `http://cli-proxy-api:8317/v1`, key = `access.api-keys` entry
 - Config edits hot-reload (file watcher); the server rewrites config.yaml on panel saves (bcrypt-hashes the management secret) — re-check file format after edits
 - Logs: `docker logs cli-proxy-api` on the Pi; model catalog auto-refreshes every 3h
+- **Second Codex account added (2026-10-06):** OAuth completed and two Codex auth files confirmed on the Pi. Remote browser login requires an SSH tunnel for `localhost:1455` as well as panel port `8317`. Start OAuth in the authenticated regular Chrome window, then open the generated OpenAI authorization link in private mode to select the second account. Private mode has no saved management key; panel HTTP 401 means the original management key is missing/invalid, not an OpenAI OAuth failure. See `HANDOFF_CLIPROXYAPI.md`, “Adding a second OpenAI/Codex account,” for the exact command and steps.
 
 ## Fork branch state (DJ)
 

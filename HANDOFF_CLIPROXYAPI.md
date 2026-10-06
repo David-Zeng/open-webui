@@ -103,7 +103,26 @@ If OAuth was already completed on another machine: `scp <src>/cliproxy/auths/cod
 2. Login with the management key → provider OAuth (e.g. Codex) → approve in browser
 3. The OpenAI consent redirects the browser to `http://localhost:1455/...` — **that callback port must be published/tunneled** (gotcha G2), and it lands on the machine running the browser, not the server
 
-Verify: `docker logs cli-proxy-api | grep -i "auth files"` → expect `1 clients (1 auth files…)`.
+Verify that the auth directory gains a separate Codex JSON file for each account. Do not print token contents.
+
+### Adding a second OpenAI/Codex account (verified on the Pi, 2026-10-06)
+
+CLIProxyAPI supports multiple Codex OAuth accounts. For a remote server, keep both panel and callback tunnels running during login:
+
+```bash
+ssh -N -o ExitOnForwardFailure=yes \
+  -L 8317:127.0.0.1:8317 \
+  -L 1455:127.0.0.1:1455 \
+  pi@10.1.1.148
+```
+
+For another deployment, substitute its SSH host. Open `http://127.0.0.1:8317/management.html` in your regular browser and start Codex OAuth. Copy the generated OpenAI authorization link into a private/incognito window and sign into the second OpenAI account. Keep the regular management window open while the private window completes consent.
+
+The private window separates OpenAI sessions, but has no saved management-panel credentials. If panel login returns **HTTP 401: invalid management key**, enter the original management key, or start OAuth from the already-authenticated regular window as above. The proxy client API key and the bcrypt hash stored in `config.yaml` are not the management login key. Never paste keys or callback URLs containing authorization codes into logs or chat.
+
+OpenAI redirects to `http://localhost:1455/auth/callback` on the browser's machine. Publishing port 1455 on the remote server alone is insufficient; the local SSH callback tunnel is required. The first Pi account had been installed by copying a token file, so it did not exercise this browser callback path.
+
+After successful consent, two Codex auth files were confirmed on the Pi (previously one). No restart was needed. Close the tunnel after login; it is not required for subsequent model requests.
 
 ## Step 4 — Verify
 
