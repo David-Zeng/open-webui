@@ -311,6 +311,9 @@ cypress/videos
 cypress/screenshots
 .vscode/settings.json
 .cptr
-
 .playwright-cli
 .codegraph
+/evals/
+
+# Local temporary fixtures and screenshots
+/tmp/
